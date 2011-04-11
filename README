@@ -3,7 +3,7 @@ PACKAGE
 package authcookie
 import "github.com/dchest/authcookie"
 
-Package authcookie implements creation and validation of signed
+Package authcookie implements creation and verification of signed
 authentication cookies.
 
 Cookie format:
@@ -30,8 +30,8 @@ FUNCTIONS
 func Login(cookie string, secret []byte) string
 
 Login returns a valid login extracted from the given cookie and validated
-using the given secret key.  If validation fails or the cookie expired, the
-functions returns an empty string.
+using the given secret key.  If verification fails or the cookie expired,
+the functions returns an empty string.
 
 func New(login string, expires int64, secret []byte) string
 
@@ -47,8 +47,8 @@ Login must not contain '|' character.
 
 func Parse(cookie string, secret []byte) (login string, expires int64, err os.Error)
 
-Parse validates the given cookie with the secret key and returns login and
-expiration time extracted from the cookie.  If the cookie fails validation
+Parse verifies the given cookie with the secret key and returns login and
+expiration time extracted from the cookie.  If the cookie fails verification
 or is not well-formed, the function returns an error.
 
 Callers must:
