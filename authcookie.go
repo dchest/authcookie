@@ -15,7 +15,7 @@
 // is a hex-encoded string.
 //
 // Because character '|' is used as a separator in cookie, functions in this
-// package escape login before signing it and store it in cookie in escaped
+// package escape login before signing it, and store it in cookie in escaped
 // form: '|' will be "~!", "~" will be "~~".  You don't have to worry about
 // this, because Parse and Login unescape it.
 //
@@ -60,7 +60,7 @@ func escape(s string) string {
 }
 
 func unescape(s string) (string, os.Error) {
-	// Avoid allocations if no escape characters found
+	// Avoid allocation if no escape characters found
 	if strings.IndexRune(s, '~') < 0 {
 		return s, nil
 	}
