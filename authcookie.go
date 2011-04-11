@@ -18,6 +18,24 @@
 // package escape login before signing it and store it in cookie in escaped
 // form: '|' will be "~!", "~" will be "~~".  You don't have to worry about
 // this, because Parse and Login unescape it.
+//
+// Example:
+//
+//	secret := []byte("my secret key")
+//
+//	// Generate cookie valid for 24 hours for user "bender"
+//	cookie := authcookie.NewSinceNow("bender", 60*60*24, secret)
+//	
+//	// ... send cookie to user's browser..
+//	
+//	// To authenticate a user later, receive cookie and:
+//	login := authcookie.Login(cookie, secret)
+//	if login != "" {
+//		// access for login granted
+//	} else {
+//		// access denied
+//	}
+//
 package authcookie
 
 import (
