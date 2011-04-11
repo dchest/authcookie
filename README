@@ -20,7 +20,7 @@ Login is a plain-text string, expiration time is a decimal string, signature
 is a hex-encoded string.
 
 Because character '|' is used as a separator in cookie, functions in this
-package escape login before signing it and store it in cookie in escaped
+package escape login before signing it, and store it in cookie in escaped
 form: '|' will be "~!", "~" will be "~~".  You don't have to worry about
 this, because Parse and Login unescape it.
 
