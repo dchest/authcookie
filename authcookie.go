@@ -25,8 +25,10 @@
 //
 //	// Generate cookie valid for 24 hours for user "bender"
 //	cookie := authcookie.NewSinceNow("bender", 60*60*24, secret)
-//	
-//	// ... send cookie to user's browser..
+//
+//	// cookie is now:
+//	// bender|1302617160|63c9f7146224ba5a0e58e5e51f7392445367eaafe9499426a1170cc2694b3c91	
+//	// send it to user's browser..
 //	
 //	// To authenticate a user later, receive cookie and:
 //	login := authcookie.Login(cookie, secret)
