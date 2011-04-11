@@ -99,18 +99,13 @@ func unescape(s string) (string, os.Error) {
 // expiration time in seconds since Unix epoch UTC, and secret key.
 // Login must not contain '|' character.
 func New(login string, expires int64, secret []byte) string {
-	val := escape(login) + "|" + strconv.Itoa64(expires)
-	b := []byte(val)
-
-	m1 := hmac.New(sha256.New, secret)
-	m1.Write(b)
-	k := m1.Sum()
-
-	m2 := hmac.New(sha256.New, k)
-	m2.Write(b)
-	sig := m2.Sum()
-
-	return val + "|" + hex.EncodeToString(sig)
+	data := escape(login) + "|" + strconv.Itoa64(expires)
+	b := []byte(data)
+	keym := hmac.New(sha256.New, secret)
+	keym.Write(b)
+	m := hmac.New(sha256.New, keym.Sum())
+	m.Write(b)
+	return data + "|" + hex.EncodeToString(m.Sum())
 }
 
 // NewSinceNow returns a signed authetication cookie for the given login,
@@ -140,20 +135,16 @@ func Parse(cookie string, secret []byte) (login string, expires int64, err os.Er
 	if err != nil {
 		return
 	}
-	if len(sig) != 32 {
+	if len(sig) != sha256.Size {
 		err = os.NewError("signature too short")
 		return
 	}
-	val := p[0] + "|" + p[1]
-	b := []byte(val)
-
-	m1 := hmac.New(sha256.New, secret)
-	m1.Write(b)
-	k := m1.Sum()
-
-	m2 := hmac.New(sha256.New, k)
-	m2.Write(b)
-	if subtle.ConstantTimeCompare(m2.Sum(), sig) != 1 {
+	b := []byte(p[0] + "|" + p[1])
+	keym := hmac.New(sha256.New, secret)
+	keym.Write(b)
+	m := hmac.New(sha256.New, keym.Sum())
+	m.Write(b)
+	if subtle.ConstantTimeCompare(m.Sum(), sig) != 1 {
 		err = os.NewError("wrong cookie signature")
 		return
 	}
