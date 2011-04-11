@@ -163,7 +163,7 @@ func Parse(cookie string, secret []byte) (login string, expires int64, err os.Er
 	return
 }
 
-// Login returns a valid login extracted from the given cookie and validated
+// Login returns a valid login extracted from the given cookie and verified
 // using the given secret key.  If verification fails or the cookie expired,
 // the functions returns an empty string.
 func Login(cookie string, secret []byte) string {
