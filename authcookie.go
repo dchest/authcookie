@@ -101,9 +101,9 @@ func unescape(s string) (string, os.Error) {
 func New(login string, expires int64, secret []byte) string {
 	data := escape(login) + "|" + strconv.Itoa64(expires)
 	b := []byte(data)
-	keym := hmac.New(sha256.New, secret)
+	keym := hmac.NewSHA256(secret)
 	keym.Write(b)
-	m := hmac.New(sha256.New, keym.Sum())
+	m := hmac.NewSHA256(keym.Sum())
 	m.Write(b)
 	return data + "|" + hex.EncodeToString(m.Sum())
 }
@@ -140,9 +140,9 @@ func Parse(cookie string, secret []byte) (login string, expires int64, err os.Er
 		return
 	}
 	b := []byte(p[0] + "|" + p[1])
-	keym := hmac.New(sha256.New, secret)
+	keym := hmac.NewSHA256(secret)
 	keym.Write(b)
-	m := hmac.New(sha256.New, keym.Sum())
+	m := hmac.NewSHA256(keym.Sum())
 	m.Write(b)
 	if subtle.ConstantTimeCompare(m.Sum(), sig) != 1 {
 		err = os.NewError("wrong cookie signature")
