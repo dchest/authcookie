@@ -1,0 +1,58 @@
+PACKAGE
+
+package authcookie
+import "github.com/dchest/authcookie"
+
+Package authcookie implements creation and validation of signed
+authentication cookies.
+
+Cookie format:
+
+	login|expiration_time|signature
+
+where:
+
+	signature=HMAC-SHA256(login|expiration_time, k)
+	where k=HMAC-SHA256(login|expiration_time, sk)
+	and sk=secret key
+
+Login is a plain-text string, expiration time is a decimal string, signature
+is a hex-encoded string.
+
+Because character '|' is used as a separator in cookie, functions in this
+package escape login before signing it and store it in cookie in escaped
+form: '|' will be "~!", "~" will be "~~".  You don't have to worry about
+this, because Parse and Login unescape it.
+
+
+FUNCTIONS
+
+func Login(cookie string, secret []byte) string
+
+Login returns a valid login extracted from the given cookie and validated
+using the given secret key.  If validation fails or the cookie expired, the
+functions returns an empty string.
+
+func New(login string, expires int64, secret []byte) string
+
+New returns a signed authentication cookie for the given login,
+expiration time in seconds since Unix epoch UTC, and secret key.
+Login must not contain '|' character.
+
+func NewSinceNow(login string, sec int64, secret []byte) string
+
+NewSinceNow returns a signed authetication cookie for the given login,
+expiration time in seconds since current time, and secret key.
+Login must not contain '|' character.
+
+func Parse(cookie string, secret []byte) (login string, expires int64, err os.Error)
+
+Parse validates the given cookie with the secret key and returns login and
+expiration time extracted from the cookie.  If the cookie fails validation
+or is not well-formed, the function returns an error.
+
+Callers must:
+
+1. Check for the returned error and deny access if it's present.
+
+2. Check the returned expiration time and deny access if it's in the past.
