@@ -50,7 +50,7 @@ func Login(cookie string, secret []byte) string
 
 Login returns a valid login extracted from the given cookie and verified
 using the given secret key.  If verification fails or the cookie expired,
-the functions returns an empty string.
+the function returns an empty string.
 
 func New(login string, expires int64, secret []byte) string
 
