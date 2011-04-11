@@ -90,7 +90,7 @@ func New(login string, expires int64, secret []byte) string {
 	m2.Write(b)
 	sig := m2.Sum()
 
-	return fmt.Sprintf("%s|%x", val, string(sig))
+	return val + "|" + hex.EncodeToString(sig)
 }
 
 // NewSinceNow returns a signed authetication cookie for the given login,
@@ -118,6 +118,10 @@ func Parse(cookie string, secret []byte) (login string, expires int64, err os.Er
 	}
 	sig, err := hex.DecodeString(p[2])
 	if err != nil {
+		return
+	}
+	if len(sig) != 32 {
+		err = os.NewError("signature too short")
 		return
 	}
 	val := p[0] + "|" + p[1]

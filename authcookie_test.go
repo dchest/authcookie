@@ -65,8 +65,13 @@ func TestParse(t *testing.T) {
 	// bad
 	key = []byte("secret key")
 	bad := []string{
+		"",
 		"badcookie",
 		"bad|cookie",
+		"|bad|cookie",
+		"||",
+		"|||",
+		"||f6fa3cab7daff3788eb02095fb470e56ed9084ef5d7a6ffd2fe29ee6929b9880",
 		"bad|cookie|again",
 		"bad|1234567890|f6fa3cab7daff3788eb02095fb470e56ed9084ef5d7a6ffd2fe29ee6929b9880",
 		"hello world|43|f6fa3cab7daff3788eb02095fb470e56ed9084ef5d7a6ffd2fe29ee6929b9880",
