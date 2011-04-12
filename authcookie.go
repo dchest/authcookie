@@ -126,7 +126,7 @@ func NewSinceNow(login string, sec int64, secret []byte) string {
 // 2. Check the returned expiration time and deny access if it's in the past.
 //
 func Parse(cookie string, secret []byte) (login string, expires int64, err os.Error) {
-	p := strings.FieldsFunc(cookie, func(c int) bool { return c == '|' })
+	p := strings.Split(cookie, "|", 3)
 	if len(p) != 3 {
 		err = os.NewError("malformed cookie")
 		return
