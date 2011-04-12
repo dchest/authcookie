@@ -95,17 +95,21 @@ func unescape(s string) (string, os.Error) {
 	return string(out[:outp]), nil
 }
 
+func getSignature(b []byte, secret []byte) []byte {
+	keym := hmac.NewSHA256(secret)
+	keym.Write(b)
+	m := hmac.NewSHA256(keym.Sum())
+	m.Write(b)
+	return m.Sum()
+}
+
 // New returns a signed authentication cookie for the given login,
 // expiration time in seconds since Unix epoch UTC, and secret key.
 // Login must not contain '|' character.
 func New(login string, expires int64, secret []byte) string {
 	data := escape(login) + "|" + strconv.Itoa64(expires)
-	b := []byte(data)
-	keym := hmac.NewSHA256(secret)
-	keym.Write(b)
-	m := hmac.NewSHA256(keym.Sum())
-	m.Write(b)
-	return data + "|" + hex.EncodeToString(m.Sum())
+	sig := getSignature([]byte(data), secret)
+	return data + "|" + hex.EncodeToString(sig)
 }
 
 // NewSinceNow returns a signed authetication cookie for the given login,
@@ -140,11 +144,8 @@ func Parse(cookie string, secret []byte) (login string, expires int64, err os.Er
 		return
 	}
 	b := []byte(p[0] + "|" + p[1])
-	keym := hmac.NewSHA256(secret)
-	keym.Write(b)
-	m := hmac.NewSHA256(keym.Sum())
-	m.Write(b)
-	if subtle.ConstantTimeCompare(m.Sum(), sig) != 1 {
+	realSig := getSignature(b, secret)
+	if subtle.ConstantTimeCompare(realSig, sig) != 1 {
 		err = os.NewError("wrong cookie signature")
 		return
 	}
