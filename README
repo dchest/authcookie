@@ -56,13 +56,11 @@ func New(login string, expires int64, secret []byte) string
 
 New returns a signed authentication cookie for the given login,
 expiration time in seconds since Unix epoch UTC, and secret key.
-Login must not contain '|' character.
 
 func NewSinceNow(login string, sec int64, secret []byte) string
 
 NewSinceNow returns a signed authetication cookie for the given login,
 expiration time in seconds since current time, and secret key.
-Login must not contain '|' character.
 
 func Parse(cookie string, secret []byte) (login string, expires int64, err os.Error)
 
