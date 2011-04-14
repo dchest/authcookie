@@ -1,23 +1,16 @@
 // Package authcookie implements creation and verification of signed
 // authentication cookies.
 //
-// Cookie format:
+// Cookie is a Base64 encoded (using URLEncoding, from RFC 4648) string, which
+// consists of concatenation of expiration time, login, and signature:
 //
-// 	login|expiration_time|signature
+// 	expiration time || login || signature
 //
-// where:
-//
-// 	signature=HMAC-SHA256(login|expiration_time, k)
-// 	where k=HMAC-SHA256(login|expiration_time, sk)
-// 	and sk=secret key
-//
-// Login is a plain-text string, expiration time is a decimal string, signature
-// is a hex-encoded string.
-//
-// Because character '|' is used as a separator in cookie, functions in this
-// package escape login before signing it, and store it in cookie in escaped
-// form: '|' will be "~!", "~" will be "~~".  You don't have to worry about
-// this, because Parse and Login unescape it.
+// where expiration time is the number of seconds since Unix epoch UTC
+// indicating when this cookie must expire (8 bytes, big-endian, uint64), login
+// is a byte string of arbitrary length (at least 1 byte, not null-terminated),
+// and signature is 32 bytes of HMAC-SHA256(expiration_time || login, k), where
+// k = HMAC-SHA256(expiration_time || login, secret key).
 //
 // Example:
 //
@@ -27,7 +20,7 @@
 //	cookie := authcookie.NewSinceNow("bender", 60*60*24, secret)
 //
 //	// cookie is now:
-//	// bender|1302617160|63c9f7146224ba5a0e58e5e51f7392445367eaafe9499426a1170cc2694b3c91	
+//	// AAAAAE2ozc9iZW5kZXIJ8B7Av9N--nwafka4slEdceRxDJqBBIjRQspA7mjrgQ==
 //	// send it to user's browser..
 //	
 //	// To authenticate a user later, receive cookie and:
@@ -38,62 +31,18 @@
 //		// access denied
 //	}
 //
+// Note that login and expiration time are not encrypted, they are only signed
+// and Base64 encoded.
 package authcookie
 
 import (
-	"fmt"
 	"crypto/hmac"
-	"crypto/sha256"
 	"crypto/subtle"
-	"encoding/hex"
+	"encoding/base64"
+	"encoding/binary"
 	"os"
-	"strconv"
-	"strings"
 	"time"
-	"utf8"
 )
-
-func escape(s string) string {
-	s = strings.Replace(s, "~", "~~", -1)
-	s = strings.Replace(s, "|", "~!", -1)
-	return s
-}
-
-func unescape(s string) (string, os.Error) {
-	// Avoid allocation if no escape characters found
-	if strings.IndexRune(s, '~') < 0 {
-		return s, nil
-	}
-
-	out := make([]byte, len(s))
-	outp := 0
-	sp := 0
-	for {
-		i := strings.IndexRune(s[sp:], '~')
-		if i < 0 {
-			outp += copy(out[outp:], s[sp:])
-			break
-		}
-		if i >= len(s)-1 {
-			return "", os.NewError("malformed escape string")
-		}
-		cp := copy(out[outp:], s[sp:sp+i])
-		sp += cp
-		outp += cp
-		rune, _ := utf8.DecodeRuneInString(s[sp+1:])
-		switch rune {
-		case '~':
-			out[outp] = '~'
-		case '!':
-			out[outp] = '|'
-		default:
-			return "", fmt.Errorf("unknown escape sequence: ~%c", rune)
-		}
-		sp += 2
-		outp++
-	}
-	return string(out[:outp]), nil
-}
 
 func getSignature(b []byte, secret []byte) []byte {
 	keym := hmac.NewSHA256(secret)
@@ -105,22 +54,30 @@ func getSignature(b []byte, secret []byte) []byte {
 
 // New returns a signed authentication cookie for the given login,
 // expiration time in seconds since Unix epoch UTC, and secret key.
-// Login must not contain '|' character.
 func New(login string, expires int64, secret []byte) string {
-	data := escape(login) + "|" + strconv.Itoa64(expires)
-	sig := getSignature([]byte(data), secret)
-	return data + "|" + hex.EncodeToString(sig)
+	llen := len(login)
+	b := make([]byte, llen+8+32)
+	// Put expiration time
+	binary.BigEndian.PutUint64(b, uint64(expires))
+	// Put login
+	copy(b[8:], []byte(login))
+	// Calculate and put signature
+	sig := getSignature([]byte(b[:8+llen]), secret)
+	copy(b[8+llen:], sig)
+	// Base64-encode
+	cookie := make([]byte, base64.URLEncoding.EncodedLen(len(b)))
+	base64.URLEncoding.Encode(cookie, b)
+	return string(cookie)
 }
 
 // NewSinceNow returns a signed authetication cookie for the given login,
 // expiration time in seconds since current time, and secret key.
-// Login must not contain '|' character.
 func NewSinceNow(login string, sec int64, secret []byte) string {
 	return New(login, sec+time.Seconds(), secret)
 }
 
 // Parse verifies the given cookie with the secret key and returns login and
-// expiration time extracted from the cookie.  If the cookie fails verification
+// expiration time extracted from the cookie. If the cookie fails verification
 // or is not well-formed, the function returns an error.
 //
 // Callers must: 
@@ -130,30 +87,35 @@ func NewSinceNow(login string, sec int64, secret []byte) string {
 // 2. Check the returned expiration time and deny access if it's in the past.
 //
 func Parse(cookie string, secret []byte) (login string, expires int64, err os.Error) {
-	p := strings.Split(cookie, "|", 3)
-	if len(p) != 3 {
-		err = os.NewError("malformed cookie")
+	blen := base64.URLEncoding.DecodedLen(len(cookie))
+	// Avoid allocation if cookie is too short
+	if blen <= 8+32 {
+		err = os.NewError("malformed cookie: too short")
 		return
 	}
-	sig, err := hex.DecodeString(p[2])
+	b := make([]byte, blen)
+	blen, err = base64.URLEncoding.Decode(b, []byte(cookie))
 	if err != nil {
 		return
 	}
-	if len(sig) != sha256.Size {
-		err = os.NewError("signature too short")
+	// Decoded length may be bifferent from max length, which
+	// we allocated, so check it, and set new length for b
+	if blen <= 8+32 {
+		err = os.NewError("malformed cookie: too short")
 		return
 	}
-	b := []byte(p[0] + "|" + p[1])
-	realSig := getSignature(b, secret)
+	b = b[:blen]
+
+	sig := b[blen-32:]
+	data := b[:blen-32]
+
+	realSig := getSignature(data, secret)
 	if subtle.ConstantTimeCompare(realSig, sig) != 1 {
 		err = os.NewError("wrong cookie signature")
 		return
 	}
-	expires, err = strconv.Atoi64(p[1])
-	if err != nil {
-		return
-	}
-	login, err = unescape(p[0])
+	expires = int64(binary.BigEndian.Uint64(data[:8]))
+	login = string(data[8:])
 	return
 }
 

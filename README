@@ -6,23 +6,16 @@ import "github.com/dchest/authcookie"
 Package authcookie implements creation and verification of signed
 authentication cookies.
 
-Cookie format:
+Cookie is a Base64 encoded (using URLEncoding, from RFC 4648) string, which
+consists of concatenation of expiration time, login, and signature:
 
-	login|expiration_time|signature
+	expiration time || login || signature
 
-where:
-
-	signature=HMAC-SHA256(login|expiration_time, k)
-	where k=HMAC-SHA256(login|expiration_time, sk)
-	and sk=secret key
-
-Login is a plain-text string, expiration time is a decimal string, signature
-is a hex-encoded string.
-
-Because character '|' is used as a separator in cookie, functions in this
-package escape login before signing it, and store it in cookie in escaped
-form: '|' will be "~!", "~" will be "~~".  You don't have to worry about
-this, because Parse and Login unescape it.
+where expiration time is the number of seconds since Unix epoch UTC
+indicating when this cookie must expire (8 bytes, big-endian, uint64), login
+is a byte string of arbitrary length (at least 1 byte, not null-terminated),
+and signature is 32 bytes of HMAC-SHA256(expiration_time || login, k), where
+k = HMAC-SHA256(expiration_time || login, secret key).
 
 Example:
 
@@ -32,7 +25,7 @@ Example:
 	cookie := authcookie.NewSinceNow("bender", 60*60*24, secret)
 
 	// cookie is now:
-	// bender|1302617160|63c9f7146224ba5a0e58e5e51f7392445367eaafe9499426a1170cc2694b3c91
+	// AAAAAE2ozc9iZW5kZXIJ8B7Av9N--nwafka4slEdceRxDJqBBIjRQspA7mjrgQ==
 	// send it to user's browser..
 
 	// To authenticate a user later, receive cookie and:
@@ -42,6 +35,9 @@ Example:
 	} else {
 		// access denied
 	}
+
+Note that login and expiration time are not encrypted, they are only signed
+and Base64 encoded.
 
 
 FUNCTIONS
@@ -65,7 +61,7 @@ expiration time in seconds since current time, and secret key.
 func Parse(cookie string, secret []byte) (login string, expires int64, err os.Error)
 
 Parse verifies the given cookie with the secret key and returns login and
-expiration time extracted from the cookie.  If the cookie fails verification
+expiration time extracted from the cookie. If the cookie fails verification
 or is not well-formed, the function returns an error.
 
 Callers must:

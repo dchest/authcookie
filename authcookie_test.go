@@ -5,41 +5,8 @@ import (
 	"time"
 )
 
-func TestEscape(t *testing.T) {
-	ss := []string{
-		"",
-		"~",
-		"|",
-		"~|",
-		"|~",
-		"!~",
-		"~!",
-		"!|",
-		"|!",
-		"one",
-		"one|two",
-		"one~two",
-		"one~!two",
-		"one~!two~~!three|four",
-		"one~!two~~~!three~|four",
-		"one~|two",
-		"~~~!|zoidberg|!~~~",
-	}
-	for _, s := range ss {
-		esc := escape(s)
-		unesc, err := unescape(esc)
-		if err != nil {
-			t.Errorf("unescape: %s", err)
-		}
-		if s != unesc {
-			t.Errorf("wrong escape/unescape"+
-				":\n\t orig: %q\n\t  esc: %q\n\tunesc: %q",s, esc, unesc)
-		}
-	}
-}
-
 func TestNew(t *testing.T) {
-	good := "hello world|42|f6fa3cab7daff3788eb02095fb470e56ed9084ef5d7a6ffd2fe29ee6929b9880"
+	good := "AAAAAAAAACpoZWxsbyB3b3JsZGVALSOGOVVAdyTB0vn84OQW4A3jBOiwW2Leyw-SrUCq"
 	c := New("hello world", 42, []byte("secret key"))
 	if c != good {
 		t.Errorf("expected %q, got %q", good, c)
@@ -54,7 +21,7 @@ func TestParse(t *testing.T) {
 	c := New(login, sec, key)
 	l, e, err := Parse(c, key)
 	if err != nil {
-		t.Errorf("error parsing valid cookie")
+		t.Errorf("error parsing valid cookie: %s", err)
 	}
 	if l != login {
 		t.Errorf("login: expected %q, got %q", login, l)
@@ -67,16 +34,10 @@ func TestParse(t *testing.T) {
 	bad := []string{
 		"",
 		"badcookie",
-		"bad|cookie",
-		"|bad|cookie",
-		"||",
-		"|||",
-		"||f6fa3cab7daff3788eb02095fb470e56ed9084ef5d7a6ffd2fe29ee6929b9880",
-		"bad|cookie|again",
-		"bad|1234567890|f6fa3cab7daff3788eb02095fb470e56ed9084ef5d7a6ffd2fe29ee6929b9880",
-		"hello world|43|f6fa3cab7daff3788eb02095fb470e56ed9084ef5d7a6ffd2fe29ee6929b9880",
-		"helloworld|42|f6fa3cab7daff3788eb02095fb470e56ed9084ef5d7a6ffd2fe29ee6929b9880",
-		"hello world|42|f0fa3cab7daff3788eb02095fb470e56ed9084ef5d7a6ffd2fe29ee6929b9880",
+		"AAAAAAAAACpoZWxsbyB3b3JsZGVALSOGOVVAdyTB0vn84OQW4A3jBOiwW2Leyw-SrUC",
+		"bAAAAAAAAACpoZWxsbyB3b3JsZGVALSOGOVVAdyTB0vn84OQW4A3jBOiwW2Leyw-SrUCq",
+		"zAAAAAAAACpoZWxsbyB3b3JsZGVALSOGOVVAdyTB0vn84OQW4A3jBOiwW2Leyw-SrUCq",
+		"AAAAAAAAACpoZWxsbyB3b3JsZGbALSOGOVVAdyTB0vn84OQW4A3jBOiwW2Leyw-SrUCq",
 	}
 	for _, v := range bad {
 		_, _, err := Parse(v, key)
