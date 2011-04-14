@@ -6,7 +6,7 @@ import (
 )
 
 func TestNew(t *testing.T) {
-	good := "AAAAAAAAACpoZWxsbyB3b3JsZGVALSOGOVVAdyTB0vn84OQW4A3jBOiwW2Leyw-SrUCq"
+	good := "AAAAKmhlbGxvIHdvcmxk9p6koQvSacAeliAm445i7errSk1NPkYJGYZhF93wG9U="
 	c := New("hello world", 42, []byte("secret key"))
 	if c != good {
 		t.Errorf("expected %q, got %q", good, c)
@@ -34,10 +34,9 @@ func TestParse(t *testing.T) {
 	bad := []string{
 		"",
 		"badcookie",
-		"AAAAAAAAACpoZWxsbyB3b3JsZGVALSOGOVVAdyTB0vn84OQW4A3jBOiwW2Leyw-SrUC",
-		"bAAAAAAAAACpoZWxsbyB3b3JsZGVALSOGOVVAdyTB0vn84OQW4A3jBOiwW2Leyw-SrUCq",
-		"zAAAAAAAACpoZWxsbyB3b3JsZGVALSOGOVVAdyTB0vn84OQW4A3jBOiwW2Leyw-SrUCq",
-		"AAAAAAAAACpoZWxsbyB3b3JsZGbALSOGOVVAdyTB0vn84OQW4A3jBOiwW2Leyw-SrUCq",
+		"AAAAAKmhlbGxvIHdvcmxk9p6koQvSacAeliAm445i7errSk1NPkYJGYZhF93wG9U=",
+		"zAAAKmhlbGxvIHdvcmxk9p6koQvSacAeliAm445i7errSk1NPkYJGYZhF93wG9U=",
+		"AAAAAKmhlbGxvIHdvcmxk9p6kiQvSacAeliAm445i7errSk1NPkYJGYZhF93wG9U=",
 	}
 	for _, v := range bad {
 		_, _, err := Parse(v, key)
