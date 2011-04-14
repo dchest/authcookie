@@ -124,10 +124,7 @@ func Parse(cookie string, secret []byte) (login string, expires int64, err os.Er
 // the function returns an empty string.
 func Login(cookie string, secret []byte) string {
 	l, exp, err := Parse(cookie, secret)
-	if err != nil {
-		return ""
-	}
-	if exp < time.Seconds() {
+	if err != nil || exp < time.Seconds() {
 		return ""
 	}
 	return l
