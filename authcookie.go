@@ -20,7 +20,7 @@
 //	cookie := authcookie.NewSinceNow("bender", 60*60*24, secret)
 //
 //	// cookie is now:
-//	// AAAAAE2ozc9iZW5kZXIJ8B7Av9N--nwafka4slEdceRxDJqBBIjRQspA7mjrgQ==
+//	// Tajh02JlbmRlcskYMxowgwPj5QZ94jaxhDoh3n0Yp4hgGtUpeO0YbMTY
 //	// send it to user's browser..
 //	
 //	// To authenticate a user later, receive cookie and:
