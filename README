@@ -52,6 +52,7 @@ func New(login string, expires int64, secret []byte) string
 
 New returns a signed authentication cookie for the given login,
 expiration time in seconds since Unix epoch UTC, and secret key.
+If the login is empty, the function returns an empty string.
 
 func NewSinceNow(login string, sec int64, secret []byte) string
 

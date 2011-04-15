@@ -6,10 +6,16 @@ import (
 )
 
 func TestNew(t *testing.T) {
+	secret := []byte("secret key")
 	good := "AAAAKmhlbGxvIHdvcmxk9p6koQvSacAeliAm445i7errSk1NPkYJGYZhF93wG9U="
-	c := New("hello world", 42, []byte("secret key"))
+	c := New("hello world", 42, secret)
 	if c != good {
 		t.Errorf("expected %q, got %q", good, c)
+	}
+	// Test empty login
+	c = New("", 42, secret)
+	if c != "" {
+		t.Errorf(`allowed empty login: got %q, expected ""`, c)
 	}
 }
 
@@ -33,6 +39,7 @@ func TestParse(t *testing.T) {
 	key = []byte("secret key")
 	bad := []string{
 		"",
+		"AAAAKvgQ2I_RGePVk9oAu55q-Valnf__Fx_hlTM-dLwYxXOf",
 		"badcookie",
 		"AAAAAKmhlbGxvIHdvcmxk9p6koQvSacAeliAm445i7errSk1NPkYJGYZhF93wG9U=",
 		"zAAAKmhlbGxvIHdvcmxk9p6koQvSacAeliAm445i7errSk1NPkYJGYZhF93wG9U=",

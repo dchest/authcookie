@@ -54,7 +54,11 @@ func getSignature(b []byte, secret []byte) []byte {
 
 // New returns a signed authentication cookie for the given login,
 // expiration time in seconds since Unix epoch UTC, and secret key.
+// If the login is empty, the function returns an empty string.
 func New(login string, expires int64, secret []byte) string {
+	if login == "" {
+		return ""
+	}
 	llen := len(login)
 	b := make([]byte, llen+4+32)
 	// Put expiration time
