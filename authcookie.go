@@ -62,9 +62,8 @@ func getSignature(b []byte, secret []byte) []byte {
 }
 
 var (
-	MalformedCookie = os.NewError("malformed cookie")
-	ExpiredCookie   = os.NewError("cookie expired")
-	WrongSignature  = os.NewError("wrong cookie signature")
+	ErrMalformedCookie = os.NewError("malformed cookie")
+	ErrWrongSignature  = os.NewError("wrong cookie signature")
 )
 
 // New returns a signed authentication cookie for the given login,
@@ -109,7 +108,7 @@ func Parse(cookie string, secret []byte) (login string, expires int64, err os.Er
 	blen := base64.URLEncoding.DecodedLen(len(cookie))
 	// Avoid allocation if cookie is too short
 	if blen < decodedMinLength {
-		err = MalformedCookie
+		err = ErrMalformedCookie
 		return
 	}
 	b := make([]byte, blen)
@@ -120,7 +119,7 @@ func Parse(cookie string, secret []byte) (login string, expires int64, err os.Er
 	// Decoded length may be bifferent from max length, which
 	// we allocated, so check it, and set new length for b
 	if blen < decodedMinLength {
-		err = MalformedCookie
+		err = ErrMalformedCookie
 		return
 	}
 	b = b[:blen]
@@ -130,7 +129,7 @@ func Parse(cookie string, secret []byte) (login string, expires int64, err os.Er
 
 	realSig := getSignature(data, secret)
 	if subtle.ConstantTimeCompare(realSig, sig) != 1 {
-		err = WrongSignature
+		err = ErrWrongSignature
 		return
 	}
 	expires = int64(binary.BigEndian.Uint32(data[:4]))
