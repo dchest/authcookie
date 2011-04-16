@@ -1,7 +1,7 @@
-PACKAGE
+Package authcookie
+=====================
 
-package authcookie
-import "github.com/dchest/authcookie"
+	import "github.com/dchest/authcookie"
 
 Package authcookie implements creation and verification of signed
 authentication cookies.
@@ -40,14 +40,17 @@ Note that login and expiration time are not encrypted, they are only signed
 and Base64 encoded.
 
 
-VARIABLES
+Variables
+---------
 
-var (
-    ErrMalformedCookie = os.NewError("malformed cookie")
-    ErrWrongSignature  = os.NewError("wrong cookie signature")
-)
+	var (
+	    ErrMalformedCookie = os.NewError("malformed cookie")
+	    ErrWrongSignature  = os.NewError("wrong cookie signature")
+	)
 
-var MinLength = base64.URLEncoding.EncodedLen(decodedMinLength)
+
+	var MinLength = base64.URLEncoding.EncodedLen(decodedMinLength)
+
 MinLength is the minimum allowed length of cookie string.
 
 It is useful for avoiding DoS attacks with too long cookies: before passing
@@ -55,23 +58,36 @@ a cookie to Parse or Login functions, check that it has length less than the
 [maximum login length allowed in your application] + MinLength.
 
 
-FUNCTIONS
+Functions
+---------
 
-func Login(cookie string, secret []byte) string
+### func Login
+
+	func Login(cookie string, secret []byte) string
+	
 Login returns a valid login extracted from the given cookie and verified
 using the given secret key.  If verification fails or the cookie expired,
 the function returns an empty string.
 
-func New(login string, expires int64, secret []byte) string
+### func New
+
+	func New(login string, expires int64, secret []byte) string
+	
 New returns a signed authentication cookie for the given login,
 expiration time in seconds since Unix epoch UTC, and secret key.
 If the login is empty, the function returns an empty string.
 
-func NewSinceNow(login string, sec int64, secret []byte) string
+### func NewSinceNow
+
+	func NewSinceNow(login string, sec int64, secret []byte) string
+	
 NewSinceNow returns a signed authetication cookie for the given login,
 expiration time in seconds since current time, and secret key.
 
-func Parse(cookie string, secret []byte) (login string, expires int64, err os.Error)
+### func Parse
+
+	func Parse(cookie string, secret []byte) (login string, expires int64, err os.Error)
+	
 Parse verifies the given cookie with the secret key and returns login and
 expiration time extracted from the cookie. If the cookie fails verification
 or is not well-formed, the function returns an error.
