@@ -43,9 +43,8 @@ and Base64 encoded.
 VARIABLES
 
 var (
-    MalformedCookie = os.NewError("malformed cookie")
-    ExpiredCookie   = os.NewError("cookie expired")
-    WrongSignature  = os.NewError("wrong cookie signature")
+    ErrMalformedCookie = os.NewError("malformed cookie")
+    ErrWrongSignature  = os.NewError("wrong cookie signature")
 )
 
 var MinLength = base64.URLEncoding.EncodedLen(decodedMinLength)
