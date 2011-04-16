@@ -44,6 +44,15 @@ import (
 	"time"
 )
 
+const decodedMinLength = 4 /*expiration*/ + 1 /*login*/ + 32 /*signature*/
+
+// MinLength is the minimum allowed length of cookie string.
+//
+// It is useful for avoiding DoS attacks with too long cookies: before passing
+// a cookie to Parse or Login functions, check that it has length less than the
+// [maximum login length allowed in your application] + MinLength.
+var MinLength = base64.URLEncoding.EncodedLen(decodedMinLength)
+
 func getSignature(b []byte, secret []byte) []byte {
 	keym := hmac.NewSHA256(secret)
 	keym.Write(b)
@@ -51,6 +60,12 @@ func getSignature(b []byte, secret []byte) []byte {
 	m.Write(b)
 	return m.Sum()
 }
+
+var (
+	MalformedCookie = os.NewError("malformed cookie")
+	ExpiredCookie   = os.NewError("cookie expired")
+	WrongSignature  = os.NewError("wrong cookie signature")
+)
 
 // New returns a signed authentication cookie for the given login,
 // expiration time in seconds since Unix epoch UTC, and secret key.
@@ -93,8 +108,8 @@ func NewSinceNow(login string, sec int64, secret []byte) string {
 func Parse(cookie string, secret []byte) (login string, expires int64, err os.Error) {
 	blen := base64.URLEncoding.DecodedLen(len(cookie))
 	// Avoid allocation if cookie is too short
-	if blen <= 4+32 {
-		err = os.NewError("malformed cookie: too short")
+	if blen < decodedMinLength {
+		err = MalformedCookie
 		return
 	}
 	b := make([]byte, blen)
@@ -104,8 +119,8 @@ func Parse(cookie string, secret []byte) (login string, expires int64, err os.Er
 	}
 	// Decoded length may be bifferent from max length, which
 	// we allocated, so check it, and set new length for b
-	if blen <= 4+32 {
-		err = os.NewError("malformed cookie: too short")
+	if blen < decodedMinLength {
+		err = MalformedCookie
 		return
 	}
 	b = b[:blen]
@@ -115,7 +130,7 @@ func Parse(cookie string, secret []byte) (login string, expires int64, err os.Er
 
 	realSig := getSignature(data, secret)
 	if subtle.ConstantTimeCompare(realSig, sig) != 1 {
-		err = os.NewError("wrong cookie signature")
+		err = WrongSignature
 		return
 	}
 	expires = int64(binary.BigEndian.Uint32(data[:4]))
