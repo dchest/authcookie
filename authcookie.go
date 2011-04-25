@@ -75,14 +75,14 @@ func New(login string, expires int64, secret []byte) string {
 	}
 	llen := len(login)
 	b := make([]byte, llen+4+32)
-	// Put expiration time
+	// Put expiration time.
 	binary.BigEndian.PutUint32(b, uint32(expires))
-	// Put login
+	// Put login.
 	copy(b[4:], []byte(login))
-	// Calculate and put signature
+	// Calculate and put signature.
 	sig := getSignature([]byte(b[:4+llen]), secret)
 	copy(b[4+llen:], sig)
-	// Base64-encode
+	// Base64-encode.
 	cookie := make([]byte, base64.URLEncoding.EncodedLen(len(b)))
 	base64.URLEncoding.Encode(cookie, b)
 	return string(cookie)
@@ -106,7 +106,7 @@ func NewSinceNow(login string, sec int64, secret []byte) string {
 //
 func Parse(cookie string, secret []byte) (login string, expires int64, err os.Error) {
 	blen := base64.URLEncoding.DecodedLen(len(cookie))
-	// Avoid allocation if cookie is too short
+	// Avoid allocation if cookie is too short.
 	if blen < decodedMinLength {
 		err = ErrMalformedCookie
 		return
@@ -116,8 +116,8 @@ func Parse(cookie string, secret []byte) (login string, expires int64, err os.Er
 	if err != nil {
 		return
 	}
-	// Decoded length may be bifferent from max length, which
-	// we allocated, so check it, and set new length for b
+	// Decoded length may be different from max length, which
+	// we allocated, so check it, and set new length for b.
 	if blen < decodedMinLength {
 		err = ErrMalformedCookie
 		return
