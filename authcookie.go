@@ -112,7 +112,7 @@ func NewSinceNow(login string, sec int64, secret []byte) string {
 //
 func Parse(cookie string, secret []byte) (login string, expires int64, err os.Error) {
 	blen := base64.URLEncoding.DecodedLen(len(cookie))
-	// Avoid allocation if cookie is too short.
+	// Avoid allocation if cookie is too short or too long.
 	if blen < decodedMinLength || blen > decodedMaxLength {
 		err = ErrMalformedCookie
 		return
