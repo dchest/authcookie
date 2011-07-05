@@ -33,6 +33,9 @@
 //
 // Note that login and expiration time are not encrypted, they are only signed
 // and Base64 encoded.
+//
+// For safety, the maximum length of base64-decoded cookie is limited to 1024
+// bytes.
 package authcookie
 
 import (
@@ -44,7 +47,10 @@ import (
 	"time"
 )
 
-const decodedMinLength = 4 /*expiration*/ + 1 /*login*/ + 32 /*signature*/
+const (
+	decodedMinLength = 4 /*expiration*/ + 1 /*login*/ + 32 /*signature*/
+	decodedMaxLength = 1024 /* maximum decoded length, for safety */
+)
 
 // MinLength is the minimum allowed length of cookie string.
 //
@@ -107,7 +113,7 @@ func NewSinceNow(login string, sec int64, secret []byte) string {
 func Parse(cookie string, secret []byte) (login string, expires int64, err os.Error) {
 	blen := base64.URLEncoding.DecodedLen(len(cookie))
 	// Avoid allocation if cookie is too short.
-	if blen < decodedMinLength {
+	if blen < decodedMinLength || blen > decodedMaxLength {
 		err = ErrMalformedCookie
 		return
 	}
