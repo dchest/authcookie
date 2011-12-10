@@ -21,7 +21,7 @@ func TestNew(t *testing.T) {
 
 func TestParse(t *testing.T) {
 	// good
-	sec := time.Seconds()
+	sec := time.Now().Unix()
 	login := "bender"
 	key := []byte("another secret key")
 	c := New(login, sec, key)
@@ -53,11 +53,10 @@ func TestParse(t *testing.T) {
 	}
 }
 
-
 func TestLogin(t *testing.T) {
 	login := "~~~!|zoidberg|!~~~"
 	key := []byte("(:€")
-	exp := time.Seconds() + 120
+	exp := time.Now().Unix() + 120
 	c := New(login, exp, key)
 	l := Login(c, key)
 	if l != login {
@@ -68,7 +67,7 @@ func TestLogin(t *testing.T) {
 	if l != "" {
 		t.Errorf("login expected empty string, got %q", l)
 	}
-	exp = time.Seconds() - 30
+	exp = time.Now().Unix() - 30
 	c = New(login, exp, key)
 	l = Login(c, key)
 	if l != "" {

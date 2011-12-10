@@ -43,7 +43,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/binary"
-	"os"
+	"errors"
 	"time"
 )
 
@@ -62,14 +62,14 @@ var MinLength = base64.URLEncoding.EncodedLen(decodedMinLength)
 func getSignature(b []byte, secret []byte) []byte {
 	keym := hmac.NewSHA256(secret)
 	keym.Write(b)
-	m := hmac.NewSHA256(keym.Sum())
+	m := hmac.NewSHA256(keym.Sum(nil))
 	m.Write(b)
-	return m.Sum()
+	return m.Sum(nil)
 }
 
 var (
-	ErrMalformedCookie = os.NewError("malformed cookie")
-	ErrWrongSignature  = os.NewError("wrong cookie signature")
+	ErrMalformedCookie = errors.New("malformed cookie")
+	ErrWrongSignature  = errors.New("wrong cookie signature")
 )
 
 // New returns a signed authentication cookie for the given login,
@@ -97,7 +97,7 @@ func New(login string, expires int64, secret []byte) string {
 // NewSinceNow returns a signed authetication cookie for the given login,
 // expiration time in seconds since current time, and secret key.
 func NewSinceNow(login string, sec int64, secret []byte) string {
-	return New(login, sec+time.Seconds(), secret)
+	return New(login, sec+time.Now().Unix(), secret)
 }
 
 // Parse verifies the given cookie with the secret key and returns login and
@@ -110,7 +110,7 @@ func NewSinceNow(login string, sec int64, secret []byte) string {
 //
 // 2. Check the returned expiration time and deny access if it's in the past.
 //
-func Parse(cookie string, secret []byte) (login string, expires int64, err os.Error) {
+func Parse(cookie string, secret []byte) (login string, expires int64, err error) {
 	blen := base64.URLEncoding.DecodedLen(len(cookie))
 	// Avoid allocation if cookie is too short or too long.
 	if blen < decodedMinLength || blen > decodedMaxLength {
@@ -148,7 +148,7 @@ func Parse(cookie string, secret []byte) (login string, expires int64, err os.Er
 // the function returns an empty string.
 func Login(cookie string, secret []byte) string {
 	l, exp, err := Parse(cookie, secret)
-	if err != nil || exp < time.Seconds() {
+	if err != nil || exp < time.Now().Unix() {
 		return ""
 	}
 	return l
