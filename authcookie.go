@@ -115,13 +115,13 @@ func Parse(cookie string, secret []byte) (login string, expires int64, err error
 		err = ErrMalformedCookie
 		return
 	}
-	b := make([]byte, blen)
-	blen, err = base64.URLEncoding.Decode(b, []byte(cookie))
+	b, err := base64.URLEncoding.DecodeString(cookie)
 	if err != nil {
 		return
 	}
 	// Decoded length may be different from max length, which
 	// we allocated, so check it, and set new length for b.
+	blen = len(b)
 	if blen < decodedMinLength {
 		err = ErrMalformedCookie
 		return
