@@ -89,9 +89,7 @@ func New(login string, expires int64, secret []byte) string {
 	sig := getSignature([]byte(b[:4+llen]), secret)
 	copy(b[4+llen:], sig)
 	// Base64-encode.
-	cookie := make([]byte, base64.URLEncoding.EncodedLen(len(b)))
-	base64.URLEncoding.Encode(cookie, b)
-	return string(cookie)
+	return base64.URLEncoding.EncodeToString(b)
 }
 
 // NewSinceNow returns a signed authetication cookie for the given login,
