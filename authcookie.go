@@ -75,14 +75,14 @@ var (
 // New returns a signed authentication cookie for the given login,
 // expiration time in seconds since Unix epoch UTC, and secret key.
 // If the login is empty, the function returns an empty string.
-func New(login string, expires int64, secret []byte) string {
+func New(login string, expires time.Time, secret []byte) string {
 	if login == "" {
 		return ""
 	}
 	llen := len(login)
 	b := make([]byte, llen+4+32)
 	// Put expiration time.
-	binary.BigEndian.PutUint32(b, uint32(expires))
+	binary.BigEndian.PutUint32(b, uint32(expires.Unix()))
 	// Put login.
 	copy(b[4:], []byte(login))
 	// Calculate and put signature.
@@ -94,8 +94,8 @@ func New(login string, expires int64, secret []byte) string {
 
 // NewSinceNow returns a signed authetication cookie for the given login,
 // expiration time in seconds since current time, and secret key.
-func NewSinceNow(login string, sec int64, secret []byte) string {
-	return New(login, sec+time.Now().Unix(), secret)
+func NewSinceNow(login string, dur time.Duration, secret []byte) string {
+	return New(login, time.Now().Add(dur), secret)
 }
 
 // Parse verifies the given cookie with the secret key and returns login and
@@ -108,7 +108,7 @@ func NewSinceNow(login string, sec int64, secret []byte) string {
 //
 // 2. Check the returned expiration time and deny access if it's in the past.
 //
-func Parse(cookie string, secret []byte) (login string, expires int64, err error) {
+func Parse(cookie string, secret []byte) (login string, expires time.Time, err error) {
 	blen := base64.URLEncoding.DecodedLen(len(cookie))
 	// Avoid allocation if cookie is too short or too long.
 	if blen < decodedMinLength || blen > decodedMaxLength {
@@ -136,7 +136,7 @@ func Parse(cookie string, secret []byte) (login string, expires int64, err error
 		err = ErrWrongSignature
 		return
 	}
-	expires = int64(binary.BigEndian.Uint32(data[:4]))
+	expires = time.Unix(int64(binary.BigEndian.Uint32(data[:4])), 0)
 	login = string(data[4:])
 	return
 }
@@ -146,7 +146,7 @@ func Parse(cookie string, secret []byte) (login string, expires int64, err error
 // the function returns an empty string.
 func Login(cookie string, secret []byte) string {
 	l, exp, err := Parse(cookie, secret)
-	if err != nil || exp < time.Now().Unix() {
+	if err != nil || exp.Before(time.Now()) {
 		return ""
 	}
 	return l
