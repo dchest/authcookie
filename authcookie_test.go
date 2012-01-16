@@ -8,12 +8,12 @@ import (
 func TestNew(t *testing.T) {
 	secret := []byte("secret key")
 	good := "AAAAKmhlbGxvIHdvcmxk9p6koQvSacAeliAm445i7errSk1NPkYJGYZhF93wG9U="
-	c := New("hello world", 42, secret)
+	c := New("hello world", time.Unix(42, 0), secret)
 	if c != good {
 		t.Errorf("expected %q, got %q", good, c)
 	}
 	// Test empty login
-	c = New("", 42, secret)
+	c = New("", time.Unix(42, 0), secret)
 	if c != "" {
 		t.Errorf(`allowed empty login: got %q, expected ""`, c)
 	}
@@ -21,7 +21,7 @@ func TestNew(t *testing.T) {
 
 func TestParse(t *testing.T) {
 	// good
-	sec := time.Seconds()
+	sec := time.Now()
 	login := "bender"
 	key := []byte("another secret key")
 	c := New(login, sec, key)
@@ -32,8 +32,10 @@ func TestParse(t *testing.T) {
 	if l != login {
 		t.Errorf("login: expected %q, got %q", login, l)
 	}
-	if e != sec {
-		t.Errorf("expiration: expected %d, got %d", sec, e)
+	// NOTE: nanos are discarded internally since only 4 bytes of timestamp are used
+	//          so we can only compare seconds here
+	if e.Unix() != sec.Unix() {
+		t.Errorf("expiration: expected %v, got %v", sec, e)
 	}
 	// bad
 	key = []byte("secret key")
@@ -53,11 +55,10 @@ func TestParse(t *testing.T) {
 	}
 }
 
-
 func TestLogin(t *testing.T) {
 	login := "~~~!|zoidberg|!~~~"
 	key := []byte("(:€")
-	exp := time.Seconds() + 120
+	exp := time.Now().Add(time.Second * 120)
 	c := New(login, exp, key)
 	l := Login(c, key)
 	if l != login {
@@ -68,7 +69,7 @@ func TestLogin(t *testing.T) {
 	if l != "" {
 		t.Errorf("login expected empty string, got %q", l)
 	}
-	exp = time.Seconds() - 30
+	exp = time.Now().Add(-(time.Second * 30))
 	c = New(login, exp, key)
 	l = Login(c, key)
 	if l != "" {

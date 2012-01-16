@@ -43,7 +43,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/binary"
-	"os"
+	"errors"
 	"time"
 )
 
@@ -62,42 +62,40 @@ var MinLength = base64.URLEncoding.EncodedLen(decodedMinLength)
 func getSignature(b []byte, secret []byte) []byte {
 	keym := hmac.NewSHA256(secret)
 	keym.Write(b)
-	m := hmac.NewSHA256(keym.Sum())
+	m := hmac.NewSHA256(keym.Sum(nil))
 	m.Write(b)
-	return m.Sum()
+	return m.Sum(nil)
 }
 
 var (
-	ErrMalformedCookie = os.NewError("malformed cookie")
-	ErrWrongSignature  = os.NewError("wrong cookie signature")
+	ErrMalformedCookie = errors.New("malformed cookie")
+	ErrWrongSignature  = errors.New("wrong cookie signature")
 )
 
 // New returns a signed authentication cookie for the given login,
 // expiration time in seconds since Unix epoch UTC, and secret key.
 // If the login is empty, the function returns an empty string.
-func New(login string, expires int64, secret []byte) string {
+func New(login string, expires time.Time, secret []byte) string {
 	if login == "" {
 		return ""
 	}
 	llen := len(login)
 	b := make([]byte, llen+4+32)
 	// Put expiration time.
-	binary.BigEndian.PutUint32(b, uint32(expires))
+	binary.BigEndian.PutUint32(b, uint32(expires.Unix()))
 	// Put login.
 	copy(b[4:], []byte(login))
 	// Calculate and put signature.
 	sig := getSignature([]byte(b[:4+llen]), secret)
 	copy(b[4+llen:], sig)
 	// Base64-encode.
-	cookie := make([]byte, base64.URLEncoding.EncodedLen(len(b)))
-	base64.URLEncoding.Encode(cookie, b)
-	return string(cookie)
+	return base64.URLEncoding.EncodeToString(b)
 }
 
 // NewSinceNow returns a signed authetication cookie for the given login,
 // expiration time in seconds since current time, and secret key.
-func NewSinceNow(login string, sec int64, secret []byte) string {
-	return New(login, sec+time.Seconds(), secret)
+func NewSinceNow(login string, dur time.Duration, secret []byte) string {
+	return New(login, time.Now().Add(dur), secret)
 }
 
 // Parse verifies the given cookie with the secret key and returns login and
@@ -110,20 +108,20 @@ func NewSinceNow(login string, sec int64, secret []byte) string {
 //
 // 2. Check the returned expiration time and deny access if it's in the past.
 //
-func Parse(cookie string, secret []byte) (login string, expires int64, err os.Error) {
+func Parse(cookie string, secret []byte) (login string, expires time.Time, err error) {
 	blen := base64.URLEncoding.DecodedLen(len(cookie))
 	// Avoid allocation if cookie is too short or too long.
 	if blen < decodedMinLength || blen > decodedMaxLength {
 		err = ErrMalformedCookie
 		return
 	}
-	b := make([]byte, blen)
-	blen, err = base64.URLEncoding.Decode(b, []byte(cookie))
+	b, err := base64.URLEncoding.DecodeString(cookie)
 	if err != nil {
 		return
 	}
 	// Decoded length may be different from max length, which
 	// we allocated, so check it, and set new length for b.
+	blen = len(b)
 	if blen < decodedMinLength {
 		err = ErrMalformedCookie
 		return
@@ -138,7 +136,7 @@ func Parse(cookie string, secret []byte) (login string, expires int64, err os.Er
 		err = ErrWrongSignature
 		return
 	}
-	expires = int64(binary.BigEndian.Uint32(data[:4]))
+	expires = time.Unix(int64(binary.BigEndian.Uint32(data[:4])), 0)
 	login = string(data[4:])
 	return
 }
@@ -148,7 +146,7 @@ func Parse(cookie string, secret []byte) (login string, expires int64, err os.Er
 // the function returns an empty string.
 func Login(cookie string, secret []byte) string {
 	l, exp, err := Parse(cookie, secret)
-	if err != nil || exp < time.Seconds() {
+	if err != nil || exp.Before(time.Now()) {
 		return ""
 	}
 	return l
