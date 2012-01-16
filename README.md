@@ -22,7 +22,7 @@ Example:
 	secret := []byte("my secret key")
 
 	// Generate cookie valid for 24 hours for user "bender"
-	cookie := authcookie.NewSinceNow("bender", 60*60*24, secret)
+	cookie := authcookie.NewSinceNow("bender", 24 * time.Hour, secret)
 
 	// cookie is now:
 	// Tajh02JlbmRlcskYMxowgwPj5QZ94jaxhDoh3n0Yp4hgGtUpeO0YbMTY
@@ -44,8 +44,8 @@ Variables
 ---------
 
 	var (
-	    ErrMalformedCookie = os.NewError("malformed cookie")
-	    ErrWrongSignature  = os.NewError("wrong cookie signature")
+	    ErrMalformedCookie = errors.New("malformed cookie")
+	    ErrWrongSignature  = errors.New("wrong cookie signature")
 	)
 
 
@@ -71,22 +71,22 @@ the function returns an empty string.
 
 ### func New
 
-	func New(login string, expires int64, secret []byte) string
+	func New(login string, expires time.Time, secret []byte) string
 	
 New returns a signed authentication cookie for the given login,
-expiration time in seconds since Unix epoch UTC, and secret key.
+expiration time, and secret key.
 If the login is empty, the function returns an empty string.
 
 ### func NewSinceNow
 
-	func NewSinceNow(login string, sec int64, secret []byte) string
+	func NewSinceNow(login string, dur time.Duration, secret []byte) string
 	
 NewSinceNow returns a signed authetication cookie for the given login,
-expiration time in seconds since current time, and secret key.
+duration time since current time, and secret key.
 
 ### func Parse
 
-	func Parse(cookie string, secret []byte) (login string, expires int64, err os.Error)
+	func Parse(cookie string, secret []byte) (login string, expires time.Time, err error)
 	
 Parse verifies the given cookie with the secret key and returns login and
 expiration time extracted from the cookie. If the cookie fails verification

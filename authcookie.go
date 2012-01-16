@@ -17,7 +17,7 @@
 //	secret := []byte("my secret key")
 //
 //	// Generate cookie valid for 24 hours for user "bender"
-//	cookie := authcookie.NewSinceNow("bender", 60*60*24, secret)
+//	cookie := authcookie.NewSinceNow("bender", 24 * time.Hour, secret)
 //
 //	// cookie is now:
 //	// Tajh02JlbmRlcskYMxowgwPj5QZ94jaxhDoh3n0Yp4hgGtUpeO0YbMTY
@@ -73,7 +73,7 @@ var (
 )
 
 // New returns a signed authentication cookie for the given login,
-// expiration time in seconds since Unix epoch UTC, and secret key.
+// expiration time, and secret key.
 // If the login is empty, the function returns an empty string.
 func New(login string, expires time.Time, secret []byte) string {
 	if login == "" {
@@ -93,7 +93,7 @@ func New(login string, expires time.Time, secret []byte) string {
 }
 
 // NewSinceNow returns a signed authetication cookie for the given login,
-// expiration time in seconds since current time, and secret key.
+// duration since current time, and secret key.
 func NewSinceNow(login string, dur time.Duration, secret []byte) string {
 	return New(login, time.Now().Add(dur), secret)
 }
