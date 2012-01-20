@@ -40,6 +40,7 @@ package authcookie
 
 import (
 	"crypto/hmac"
+	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
 	"encoding/binary"
@@ -49,7 +50,7 @@ import (
 
 const (
 	decodedMinLength = 4 /*expiration*/ + 1 /*login*/ + 32 /*signature*/
-	decodedMaxLength = 1024 /* maximum decoded length, for safety */
+	decodedMaxLength = 1024                                /* maximum decoded length, for safety */
 )
 
 // MinLength is the minimum allowed length of cookie string.
@@ -60,9 +61,9 @@ const (
 var MinLength = base64.URLEncoding.EncodedLen(decodedMinLength)
 
 func getSignature(b []byte, secret []byte) []byte {
-	keym := hmac.NewSHA256(secret)
+	keym := hmac.New(sha256.New, secret)
 	keym.Write(b)
-	m := hmac.NewSHA256(keym.Sum(nil))
+	m := hmac.New(sha256.New, keym.Sum(nil))
 	m.Write(b)
 	return m.Sum(nil)
 }
