@@ -64,7 +64,7 @@ Functions
 ### func Login
 
 	func Login(cookie string, secret []byte) string
-	
+
 Login returns a valid login extracted from the given cookie and verified
 using the given secret key.  If verification fails or the cookie expired,
 the function returns an empty string.
@@ -72,22 +72,28 @@ the function returns an empty string.
 ### func New
 
 	func New(login string, expires time.Time, secret []byte) string
-	
+
 New returns a signed authentication cookie for the given login,
 expiration time, and secret key.
 If the login is empty, the function returns an empty string.
 
+## func NewNoPadding
+
+	func NewNoPadding(login string, expires time.Time, secret []byte) string
+
+NewNoPadding is like New but returns cookie encoded without base64 padding characters.
+
 ### func NewSinceNow
 
 	func NewSinceNow(login string, dur time.Duration, secret []byte) string
-	
+
 NewSinceNow returns a signed authetication cookie for the given login,
 duration time since current time, and secret key.
 
 ### func Parse
 
 	func Parse(cookie string, secret []byte) (login string, expires time.Time, err error)
-	
+
 Parse verifies the given cookie with the secret key and returns login and
 expiration time extracted from the cookie. If the cookie fails verification
 or is not well-formed, the function returns an error.
