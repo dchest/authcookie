@@ -77,7 +77,7 @@ New returns a signed authentication cookie for the given login,
 expiration time, and secret key.
 If the login is empty, the function returns an empty string.
 
-## func NewNoPadding
+### func NewNoPadding
 
 	func NewNoPadding(login string, expires time.Time, secret []byte) string
 
