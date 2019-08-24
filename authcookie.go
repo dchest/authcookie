@@ -22,7 +22,7 @@
 //	// cookie is now:
 //	// Tajh02JlbmRlcskYMxowgwPj5QZ94jaxhDoh3n0Yp4hgGtUpeO0YbMTY
 //	// send it to user's browser..
-//	
+//
 //	// To authenticate a user later, receive cookie and:
 //	login := authcookie.Login(cookie, secret)
 //	if login != "" {
@@ -59,6 +59,7 @@ const (
 // a cookie to Parse or Login functions, check that it has length less than the
 // [maximum login length allowed in your application] + MinLength.
 var MinLength = base64.URLEncoding.EncodedLen(decodedMinLength)
+var MinLengthNoPadding = base64.RawURLEncoding.EncodedLen(decodedMinLength)
 
 func getSignature(b []byte, secret []byte) []byte {
 	keym := hmac.New(sha256.New, secret)
@@ -73,10 +74,18 @@ var (
 	ErrWrongSignature  = errors.New("wrong cookie signature")
 )
 
+func New(login string, expires time.Time, secret []byte) string {
+	return internalNew(login, expires, secret, false)
+}
+
+func NewNoPadding(login string, expires time.Time, secret []byte) string {
+	return internalNew(login, expires, secret, true)
+}
+
 // New returns a signed authentication cookie for the given login,
 // expiration time, and secret key.
 // If the login is empty, the function returns an empty string.
-func New(login string, expires time.Time, secret []byte) string {
+func internalNew(login string, expires time.Time, secret []byte, noPadding bool) string {
 	if login == "" {
 		return ""
 	}
@@ -90,39 +99,68 @@ func New(login string, expires time.Time, secret []byte) string {
 	sig := getSignature([]byte(b[:4+llen]), secret)
 	copy(b[4+llen:], sig)
 	// Base64-encode.
+	if noPadding {
+		return base64.RawURLEncoding.EncodeToString(b)
+	}
 	return base64.URLEncoding.EncodeToString(b)
 }
 
 // NewSinceNow returns a signed authetication cookie for the given login,
 // duration since current time, and secret key.
 func NewSinceNow(login string, dur time.Duration, secret []byte) string {
-	return New(login, time.Now().Add(dur), secret)
+	return internalNew(login, time.Now().Add(dur), secret, false)
+}
+
+func NewSinceNowNoPadding(login string, dur time.Duration, secret []byte) string {
+	return internalNew(login, time.Now().Add(dur), secret, true)
+}
+
+func Parse(cookie string, secret []byte) (login string, expires time.Time, err error) {
+	return internalParse(cookie, secret, false)
+}
+
+func ParseNoPadding(cookie string, secret []byte) (login string, expires time.Time, err error) {
+	return internalParse(cookie, secret, true)
 }
 
 // Parse verifies the given cookie with the secret key and returns login and
 // expiration time extracted from the cookie. If the cookie fails verification
 // or is not well-formed, the function returns an error.
 //
-// Callers must: 
+// Callers must:
 //
 // 1. Check for the returned error and deny access if it's present.
 //
 // 2. Check the returned expiration time and deny access if it's in the past.
 //
-func Parse(cookie string, secret []byte) (login string, expires time.Time, err error) {
-	blen := base64.URLEncoding.DecodedLen(len(cookie))
-	// Avoid allocation if cookie is too short or too long.
-	if blen < decodedMinLength || blen > decodedMaxLength {
-		err = ErrMalformedCookie
-		return
-	}
-	b, err := base64.URLEncoding.DecodeString(cookie)
-	if err != nil {
-		return
+func internalParse(cookie string, secret []byte, noPadding bool) (login string, expires time.Time, err error) {
+	var b []byte
+	if noPadding {
+		blen := base64.RawURLEncoding.DecodedLen(len(cookie))
+		// Avoid allocation if cookie is too short or too long.
+		if blen < decodedMinLength || blen > decodedMaxLength {
+			err = ErrMalformedCookie
+			return
+		}
+		b, err = base64.RawURLEncoding.DecodeString(cookie)
+		if err != nil {
+			return
+		}
+	} else {
+		blen := base64.URLEncoding.DecodedLen(len(cookie))
+		// Avoid allocation if cookie is too short or too long.
+		if blen < decodedMinLength || blen > decodedMaxLength {
+			err = ErrMalformedCookie
+			return
+		}
+		b, err = base64.URLEncoding.DecodeString(cookie)
+		if err != nil {
+			return
+		}
 	}
 	// Decoded length may be different from max length, which
 	// we allocated, so check it, and set new length for b.
-	blen = len(b)
+	blen := len(b)
 	if blen < decodedMinLength {
 		err = ErrMalformedCookie
 		return
