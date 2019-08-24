@@ -60,45 +60,13 @@ func TestParse(t *testing.T) {
 		"AAAAAKmhlbGxvIHdvcmxk9p6koQvSacAeliAm445i7errSk1NPkYJGYZhF93wG9U=",
 		"zAAAKmhlbGxvIHdvcmxk9p6koQvSacAeliAm445i7errSk1NPkYJGYZhF93wG9U=",
 		"AAAAAKmhlbGxvIHdvcmxk9p6kiQvSacAeliAm445i7errSk1NPkYJGYZhF93wG9U=",
-	}
-	for _, v := range bad {
-		_, _, err := Parse(v, key)
-		if err == nil {
-			t.Errorf("bad cookie didn't return error: %q", v)
-		}
-	}
-}
-
-func TestParseNoPadding(t *testing.T) {
-	// good
-	sec := time.Now()
-	login := "bender"
-	key := []byte("another secret key")
-	c := New(login, sec, key)
-	l, e, err := Parse(c, key)
-	if err != nil {
-		t.Errorf("error parsing valid cookie: %s", err)
-	}
-	if l != login {
-		t.Errorf("login: expected %q, got %q", login, l)
-	}
-	// NOTE: nanos are discarded internally since only 4 bytes of timestamp are used
-	//          so we can only compare seconds here
-	if e.Unix() != sec.Unix() {
-		t.Errorf("expiration: expected %v, got %v", sec, e)
-	}
-	// bad
-	key = []byte("secret key")
-	bad := []string{
-		"",
-		"AAAAKvgQ2I_RGePVk9oAu55q-Valnf__Fx_hlTM-dLwYxXOf",
-		"badcookie",
+		// no padding
 		"AAAAAKmhlbGxvIHdvcmxk9p6koQvSacAeliAm445i7errSk1NPkYJGYZhF93wG9U",
 		"zAAAKmhlbGxvIHdvcmxk9p6koQvSacAeliAm445i7errSk1NPkYJGYZhF93wG9U",
 		"AAAAAKmhlbGxvIHdvcmxk9p6kiQvSacAeliAm445i7errSk1NPkYJGYZhF93wG9U",
 	}
 	for _, v := range bad {
-		_, _, err := ParseNoPadding(v, key)
+		_, _, err := Parse(v, key)
 		if err == nil {
 			t.Errorf("bad cookie didn't return error: %q", v)
 		}

@@ -45,6 +45,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -59,6 +60,8 @@ const (
 // a cookie to Parse or Login functions, check that it has length less than the
 // [maximum login length allowed in your application] + MinLength.
 var MinLength = base64.URLEncoding.EncodedLen(decodedMinLength)
+
+// MinLengthNoPadding is like MinLength for tokens without base64 padding.
 var MinLengthNoPadding = base64.RawURLEncoding.EncodedLen(decodedMinLength)
 
 func getSignature(b []byte, secret []byte) []byte {
@@ -74,18 +77,19 @@ var (
 	ErrWrongSignature  = errors.New("wrong cookie signature")
 )
 
-func New(login string, expires time.Time, secret []byte) string {
-	return internalNew(login, expires, secret, false)
-}
-
-func NewNoPadding(login string, expires time.Time, secret []byte) string {
-	return internalNew(login, expires, secret, true)
-}
-
 // New returns a signed authentication cookie for the given login,
 // expiration time, and secret key.
 // If the login is empty, the function returns an empty string.
-func internalNew(login string, expires time.Time, secret []byte, noPadding bool) string {
+func New(login string, expires time.Time, secret []byte) string {
+	return newCookie(login, expires, secret, false)
+}
+
+// NewNoPadding is like New but returns cookie encoded without base64 padding characters.
+func NewNoPadding(login string, expires time.Time, secret []byte) string {
+	return newCookie(login, expires, secret, true)
+}
+
+func newCookie(login string, expires time.Time, secret []byte, noPadding bool) string {
 	if login == "" {
 		return ""
 	}
@@ -108,19 +112,12 @@ func internalNew(login string, expires time.Time, secret []byte, noPadding bool)
 // NewSinceNow returns a signed authetication cookie for the given login,
 // duration since current time, and secret key.
 func NewSinceNow(login string, dur time.Duration, secret []byte) string {
-	return internalNew(login, time.Now().Add(dur), secret, false)
+	return newCookie(login, time.Now().Add(dur), secret, false)
 }
 
+// NewSinceNowNoPadding is like NewSinceNow but returns a cookie without base64 padding characters.
 func NewSinceNowNoPadding(login string, dur time.Duration, secret []byte) string {
-	return internalNew(login, time.Now().Add(dur), secret, true)
-}
-
-func Parse(cookie string, secret []byte) (login string, expires time.Time, err error) {
-	return internalParse(cookie, secret, false)
-}
-
-func ParseNoPadding(cookie string, secret []byte) (login string, expires time.Time, err error) {
-	return internalParse(cookie, secret, true)
+	return newCookie(login, time.Now().Add(dur), secret, true)
 }
 
 // Parse verifies the given cookie with the secret key and returns login and
@@ -133,34 +130,26 @@ func ParseNoPadding(cookie string, secret []byte) (login string, expires time.Ti
 //
 // 2. Check the returned expiration time and deny access if it's in the past.
 //
-func internalParse(cookie string, secret []byte, noPadding bool) (login string, expires time.Time, err error) {
+func Parse(cookie string, secret []byte) (login string, expires time.Time, err error) {
 	var b []byte
-	if noPadding {
-		blen := base64.RawURLEncoding.DecodedLen(len(cookie))
-		// Avoid allocation if cookie is too short or too long.
-		if blen < decodedMinLength || blen > decodedMaxLength {
-			err = ErrMalformedCookie
-			return
-		}
-		b, err = base64.RawURLEncoding.DecodeString(cookie)
-		if err != nil {
-			return
-		}
-	} else {
-		blen := base64.URLEncoding.DecodedLen(len(cookie))
-		// Avoid allocation if cookie is too short or too long.
-		if blen < decodedMinLength || blen > decodedMaxLength {
-			err = ErrMalformedCookie
-			return
-		}
-		b, err = base64.URLEncoding.DecodeString(cookie)
-		if err != nil {
-			return
-		}
+	encoding := base64.RawURLEncoding
+	// If we have padding, use URLEncoding instead of RawURLEncoding.
+	if strings.LastIndexByte(cookie, '=') != -1 {
+		encoding = base64.URLEncoding
+	}
+	blen := encoding.DecodedLen(len(cookie))
+	// Avoid allocation if cookie is too short or too long.
+	if blen < decodedMinLength || blen > decodedMaxLength {
+		err = ErrMalformedCookie
+		return
+	}
+	b, err = encoding.DecodeString(cookie)
+	if err != nil {
+		return
 	}
 	// Decoded length may be different from max length, which
 	// we allocated, so check it, and set new length for b.
-	blen := len(b)
+	blen = len(b)
 	if blen < decodedMinLength {
 		err = ErrMalformedCookie
 		return
